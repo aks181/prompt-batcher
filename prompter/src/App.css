@@ -1,0 +1,438 @@
+/* ── CSS Variables ───────────────────────────────────────── */
+:root {
+    color-scheme: light;
+    --bg-page: #f5f7fb;
+    --bg-card: #ffffff;
+    --bg-subtle: #fafafa;
+    --bg-input: #ffffff;
+    --text: #222222;
+    --text-muted: #666666;
+    --border: #d7dce5;
+    --border-table: #dfe3ea;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --btn-primary: #2563eb;
+    --btn-primary-text: #ffffff;
+    --btn-outline-text:#222222;
+    --btn-danger-color: #c62828;
+    --btn-danger-border: #c62828;
+    --btn-danger-hover: #ffebee;
+    --btn-copied: #16a34a;
+    --batch-dash: #444444;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-page: #0d1117;
+    --bg-card: #161b22;
+    --bg-subtle: #0d1117;
+    --bg-input: #1c2128;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --border: #30363d;
+    --border-table: #21262d;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    --btn-primary: #388bfd;
+    --btn-primary-text: #ffffff;
+    --btn-outline-text:#ffffff;
+    --btn-danger-color: #f85149;
+    --btn-danger-border: #f85149;
+    --btn-danger-hover: #1f1517;
+    --btn-copied: #3fb950;
+    --batch-dash: #8b949e;
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Inter, Arial, sans-serif;
+    background: var(--bg-page);
+    color: var(--text);
+    transition: background 0.2s, color 0.2s;
+}
+
+#root {
+    width: 100%;
+}
+
+/* ── App Shell ───────────────────────────────────────────── */
+.app {
+    width: 100%;
+    padding: 24px 48px;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--text);
+}
+
+.btn-theme {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+    margin-right: 0;
+}
+
+.btn-theme:hover {
+    opacity: 0.85;
+}
+
+/* ── Typography ──────────────────────────────────────────── */
+h2 {
+    margin-top: 0;
+    color: var(--text);
+}
+
+h3 {
+    margin: 0;
+    color: var(--text);
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+.card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+/* ── Form elements ───────────────────────────────────────── */
+textarea,
+input[type="text"] {
+    width: 100%;
+    resize: vertical;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-input);
+    color: var(--text);
+    font-family: inherit;
+}
+
+textarea:focus,
+input[type="text"]:focus {
+    outline: 2px solid var(--btn-primary);
+    outline-offset: 1px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--btn-primary);
+    color: var(--btn-primary-text);
+    font-size: 14px;
+    margin-right: 8px;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-copied {
+    background: var(--btn-copied) !important;
+}
+
+/* ── Stats strip ─────────────────────────────────────────── */
+.stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.stats>div {
+    background: var(--bg-card);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+/* ── 2-column layout rows ────────────────────────────────── */
+.input-row,
+.filter-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.input-row .card,
+.filter-row .card {
+    flex: 1;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-row .card textarea {
+    flex: 1;
+    min-height: 160px;
+}
+
+.filter-card {
+    flex: 3 !important;
+}
+
+.search-card {
+    flex: 1 !important;
+}
+
+/* ── Legend / Filters ────────────────────────────────────── */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-container .actions {
+    margin-bottom: 0;
+    margin-left: 16px;
+}
+
+.filter-container .actions button {
+    border: 2px solid var(--btn-primary);
+    background: transparent;
+    color: var(--btn-outline-text);
+    padding: 9px 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+/* ── Table section ───────────────────────────────────────── */
+.table-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.table-section-header h2 {
+    margin: 0;
+}
+
+.table-wrapper {
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    z-index: 2;
+    color: var(--text);
+}
+
+th,
+td {
+    border: 1px solid var(--border-table);
+    padding: 10px;
+    text-align: left;
+    vertical-align: top;
+    color: var(--text);
+}
+
+.batch-row td {
+    border-bottom: 3px dashed var(--batch-dash) !important;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+/* ── Batch preview ───────────────────────────────────────── */
+.batch-preview {
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--bg-subtle);
+    color: var(--text);
+}
+
+.batch-preview summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* ── Final Inputs ────────────────────────────────────────── */
+.output {
+    margin-bottom: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+}
+
+.output-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.output-summary::-webkit-details-marker {
+    display: none;
+}
+
+.output-content {
+    margin-top: 10px;
+}
+
+.output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.output-header h2 {
+    margin: 0;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 500px;
+    overflow: auto;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    z-index: 9999;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.toast.success {
+    background: #16a34a;
+}
+
+.toast.warning {
+    background: #d97706;
+}
+
+.toast.error {
+    background: #dc2626;
+}
+
+/* ── Search ──────────────────────────────────────────────── */
+.search-box {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-input);
+    color: var(--text);
+}
+
+/* ── Danger / Delete ─────────────────────────────────────── */
+.delete-btn {
+    padding: 4px 8px;
+    min-width: auto;
+    background: transparent;
+    color: var(--btn-danger-color);
+    border: 1px solid var(--btn-danger-border);
+    margin-right: 0;
+}
+
+.delete-btn:hover {
+    background: var(--btn-danger-hover);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .app {
+        padding: 16px 20px;
+    }
+
+    .input-row,
+    .filter-row {
+        flex-direction: column;
+    }
+
+    .output-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
