@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-const BATCH_SIZE = 16;
+const DEFAULT_BATCH_SIZE = 16;
 const STORAGE_KEY = "scene-prompt-batch-builder-state-v1";
+const SAVED_PROMPTS_KEY = "scene-prompt-builder-saved-prompts-v1";
+
+function readSavedPrompts() {
+  try {
+    const raw = localStorage.getItem(SAVED_PROMPTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 /** Read and parse saved state once — used by lazy useState initialisers. */
 function readSaved() {
@@ -52,6 +64,15 @@ export default function App() {
     return typeof s.fixedPrompt === "string" ? s.fixedPrompt : "";
   });
 
+  const [batchSize, setBatchSize] = useState(() => {
+    const s = readSaved();
+    const parsed = Number(s.batchSize);
+
+    if (!Number.isFinite(parsed)) return DEFAULT_BATCH_SIZE;
+
+    return Math.max(1, Math.min(128, Math.floor(parsed)));
+  });
+
   const [rows, setRows] = useState(() => {
     const s = readSaved();
     return Array.isArray(s.rows) ? s.rows : [];
@@ -84,6 +105,17 @@ export default function App() {
 
   const [copiedItems, setCopiedItems] = useState({});
 
+  const [lastDeletedRow, setLastDeletedRow] = useState(null);
+
+  const [savedPrompts, setSavedPrompts] = useState(() => readSavedPrompts());
+
+  const [showPromptsModal, setShowPromptsModal] = useState(false);
+
+  // Draft is a working copy while the modal is open
+  const [promptDrafts, setPromptDrafts] = useState([]);
+
+  const [copiedPromptId, setCopiedPromptId] = useState(null);
+
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("dark-mode");
     if (saved !== null) return saved === "true";
@@ -91,6 +123,54 @@ export default function App() {
   });
 
   const [toast, setToast] = useState(null);
+
+  const openPromptsModal = () => {
+    // Deep-clone so edits don't mutate saved state until Save
+    setPromptDrafts(
+      savedPrompts.length
+        ? savedPrompts.map((p) => ({ ...p }))
+        : [{ id: crypto.randomUUID(), title: "", content: "" }],
+    );
+    setShowPromptsModal(true);
+  };
+
+  const closePromptsModal = () => {
+    setShowPromptsModal(false);
+  };
+
+  const addPromptDraft = () => {
+    setPromptDrafts((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), title: "", content: "" },
+    ]);
+  };
+
+  const removePromptDraft = (id) => {
+    setPromptDrafts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const updatePromptDraft = (id, field, value) => {
+    setPromptDrafts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+    );
+  };
+
+  const savePrompts = () => {
+    const cleaned = promptDrafts.filter(
+      (p) => p.title.trim() || p.content.trim(),
+    );
+    setSavedPrompts(cleaned);
+    localStorage.setItem(SAVED_PROMPTS_KEY, JSON.stringify(cleaned));
+    setShowPromptsModal(false);
+    showToast("Prompts saved");
+  };
+
+  const copyPrompt = async (prompt) => {
+    await navigator.clipboard.writeText(prompt.content);
+    setCopiedPromptId(prompt.id);
+    showToast(`Copied "${prompt.title || "Untitled"}"`);
+    setTimeout(() => setCopiedPromptId((prev) => (prev === prompt.id ? null : prev)), 2000);
+  };
 
   const showToast = (message, type = "success") => {
     setToast({
@@ -112,6 +192,7 @@ export default function App() {
   useEffect(() => {
     const payload = {
       fixedPrompt,
+      batchSize,
       rows,
       batches,
       finalInputs,
@@ -123,6 +204,7 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [
     fixedPrompt,
+    batchSize,
     rows,
     batches,
     finalInputs,
@@ -316,26 +398,64 @@ export default function App() {
   };
 
   const removeRow = (rowId) => {
-    setRows((prev) => prev.filter((row) => row.id !== rowId));
+    setRows((prev) => {
+      const removeIndex = prev.findIndex((row) => row.id === rowId);
 
-    showToast("Row removed");
+      if (removeIndex === -1) return prev;
+
+      const removedRow = prev[removeIndex];
+
+      setLastDeletedRow({
+        row: removedRow,
+        index: removeIndex,
+      });
+
+      return prev.filter((row) => row.id !== rowId);
+    });
+
+    showToast("Row removed. Use Undo to restore.", "warning");
   };
 
   const buildBatches = (sourceRows) => {
     const generated = [];
 
-    for (let i = 0; i < sourceRows.length; i += BATCH_SIZE) {
-      generated.push(sourceRows.slice(i, i + BATCH_SIZE));
+    for (let i = 0; i < sourceRows.length; i += batchSize) {
+      generated.push(sourceRows.slice(i, i + batchSize));
     }
 
     return generated;
+  };
+
+  const undoDeleteRow = () => {
+    if (!lastDeletedRow) return;
+
+    setRows((prev) => {
+      const next = [...prev];
+      next.splice(lastDeletedRow.index, 0, lastDeletedRow.row);
+      return next;
+    });
+
+    setLastDeletedRow(null);
+
+    showToast("Row restored");
+  };
+
+  const handleBatchSizeChange = (value) => {
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed)) {
+      setBatchSize(DEFAULT_BATCH_SIZE);
+      return;
+    }
+
+    setBatchSize(Math.max(1, Math.min(128, Math.floor(parsed))));
   };
 
   useEffect(() => {
     if (!showBatches) return;
 
     setBatches(buildBatches(rows));
-  }, [rows, showBatches]);
+  }, [rows, showBatches, batchSize]);
 
   const toggleBatches = () => {
     setShowBatches((prev) => {
@@ -444,7 +564,9 @@ ${input.text}`,
     setSelectedLayers([]);
     setSearchText("");
     setShowBatches(false);
+    setBatchSize(DEFAULT_BATCH_SIZE);
     setCopiedItems({});
+    setLastDeletedRow(null);
 
     localStorage.removeItem(STORAGE_KEY);
 
@@ -452,18 +574,21 @@ ${input.text}`,
   };
 
   const clearTable = () => {
+    if (!window.confirm("Clear the entire table? This cannot be undone.")) return;
+
     setRows([]);
     setBatches([]);
     setFinalInputs([]);
     setSelectedLayers([]);
     setShowBatches(false);
     setCopiedItems({});
+    setLastDeletedRow(null);
 
     showToast("Table cleared");
   };
 
   const getBatchNumber = (originalIndex) => {
-    return Math.floor(originalIndex / BATCH_SIZE) + 1;
+    return Math.floor(originalIndex / batchSize) + 1;
   };
 
   return (
@@ -471,14 +596,102 @@ ${input.text}`,
       <header className="app-header">
         <h1>Scene Prompt Batch Builder</h1>
 
-        <button
-          className="btn-theme"
-          onClick={() => setDarkMode((d) => !d)}
-          title="Toggle dark mode"
-        >
-          {darkMode ? "☀️ Light" : "🌙 Dark"}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn-theme"
+            onClick={openPromptsModal}
+            title="Other fixed prompts"
+          >
+            📋 Saved Prompts
+          </button>
+
+          <button
+            className="btn-theme"
+            onClick={() => setDarkMode((d) => !d)}
+            title="Toggle dark mode"
+          >
+            {darkMode ? "☀️ Light" : "🌙 Dark"}
+          </button>
+        </div>
       </header>
+
+      {showPromptsModal && (
+        <div className="modal-overlay" onClick={closePromptsModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Saved Prompts</h2>
+
+              <button className="modal-close" onClick={closePromptsModal}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {promptDrafts.map((draft, index) => (
+                <div key={draft.id} className="prompt-box">
+                  <div className="prompt-box-header">
+                    <input
+                      type="text"
+                      className="prompt-title-input"
+                      placeholder={`Prompt ${index + 1} title…`}
+                      value={draft.title}
+                      onChange={(e) =>
+                        updatePromptDraft(draft.id, "title", e.target.value)
+                      }
+                    />
+
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        className={
+                          copiedPromptId === draft.id
+                            ? "btn-icon btn-icon-copied"
+                            : "btn-icon"
+                        }
+                        title="Copy to clipboard"
+                        onClick={() => copyPrompt(draft)}
+                        disabled={!draft.content.trim()}
+                      >
+                        {copiedPromptId === draft.id ? "✓" : "⧉"}
+                      </button>
+
+                      <button
+                        className="btn-icon btn-icon-remove"
+                        title="Remove prompt"
+                        onClick={() => removePromptDraft(draft.id)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea
+                    className="prompt-box-textarea"
+                    placeholder="Prompt content…"
+                    value={draft.content}
+                    onChange={(e) =>
+                      updatePromptDraft(draft.id, "content", e.target.value)
+                    }
+                  />
+                </div>
+              ))}
+
+              <button className="btn-add-prompt" onClick={addPromptDraft}>
+                + Add Prompt
+              </button>
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={closePromptsModal} className="btn-cancel">
+                Cancel
+              </button>
+
+              <button onClick={savePrompts}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
 
@@ -516,7 +729,7 @@ ${input.text}`,
 
         <div>Layers: {uniqueLayers.length}</div>
 
-        <div>Batches: {Math.ceil(rows.length / BATCH_SIZE)}</div>
+        <div>Batches: {Math.ceil(rows.length / batchSize)}</div>
 
         <div>Final Inputs: {finalInputs.length}</div>
       </section>
@@ -569,13 +782,23 @@ ${input.text}`,
         <div className="table-section-header">
           <h2>Master Table</h2>
 
-          <button
-            className="delete-btn"
-            onClick={clearTable}
-            disabled={!rows.length}
-          >
-            Clear Table
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              className="undo-btn"
+              onClick={undoDeleteRow}
+              disabled={!lastDeletedRow}
+            >
+              ↩ Undo Delete
+            </button>
+
+            <button
+              className="delete-btn"
+              onClick={clearTable}
+              disabled={!rows.length}
+            >
+              Clear Table
+            </button>
+          </div>
         </div>
 
         <div className="table-wrapper">
@@ -600,7 +823,7 @@ ${input.text}`,
 
                 const batchNumber = getBatchNumber(originalIndex);
 
-                const isBatchEnd = (originalIndex + 1) % BATCH_SIZE === 0;
+                const isBatchEnd = (originalIndex + 1) % batchSize === 0;
 
                 return (
                   <tr
@@ -637,6 +860,17 @@ ${input.text}`,
           <button onClick={toggleBatches} disabled={!rows.length}>
             {showBatches ? "Hide Batches" : "Show Batches"}
           </button>
+
+          <label className="batch-size-inline">
+            Batch Size
+            <input
+              type="number"
+              min="1"
+              max="128"
+              value={batchSize}
+              onChange={(e) => handleBatchSizeChange(e.target.value)}
+            />
+          </label>
 
           <button onClick={generateFinalInputs} disabled={!rows.length}>
             Generate Final Inputs
