@@ -88,6 +88,13 @@ export default function App() {
     return Array.isArray(s.finalInputs) ? s.finalInputs : [];
   });
 
+  const [finalInputDone, setFinalInputDone] = useState(() => {
+    const s = readSaved();
+    return s.finalInputDone && typeof s.finalInputDone === "object"
+      ? s.finalInputDone
+      : {};
+  });
+
   const [selectedLayers, setSelectedLayers] = useState(() => {
     const s = readSaved();
     return Array.isArray(s.selectedLayers) ? s.selectedLayers : [];
@@ -196,6 +203,7 @@ export default function App() {
       rows,
       batches,
       finalInputs,
+      finalInputDone,
       selectedLayers,
       searchText,
       showBatches,
@@ -208,6 +216,7 @@ export default function App() {
     rows,
     batches,
     finalInputs,
+    finalInputDone,
     selectedLayers,
     searchText,
     showBatches,
@@ -493,6 +502,7 @@ ${scenePrompts}`,
     });
 
     setFinalInputs(outputs);
+    setFinalInputDone({});
 
     setCopiedItems({});
 
@@ -508,6 +518,13 @@ ${scenePrompts}`,
     }));
 
     showToast(`Copied ${label}`);
+  };
+
+  const toggleFinalInputDone = (inputId) => {
+    setFinalInputDone((prev) => ({
+      ...prev,
+      [inputId]: !prev[inputId],
+    }));
   };
 
   const copyAllFinalInputs = async () => {
@@ -561,6 +578,7 @@ ${input.text}`,
     setRows([]);
     setBatches([]);
     setFinalInputs([]);
+    setFinalInputDone({});
     setSelectedLayers([]);
     setSearchText("");
     setShowBatches(false);
@@ -579,6 +597,7 @@ ${input.text}`,
     setRows([]);
     setBatches([]);
     setFinalInputs([]);
+    setFinalInputDone({});
     setSelectedLayers([]);
     setShowBatches(false);
     setCopiedItems({});
@@ -935,21 +954,40 @@ ${input.text}`,
           {finalInputs.map((input) => (
             <details key={input.id} className="output">
               <summary className="output-summary">
-                <h3>Final Input #{input.id}</h3>
+                <h3 className={finalInputDone[input.id] ? "output-title-done" : ""}>
+                  Final Input #{input.id}
+                </h3>
 
-                <button
-                  className={
-                    copiedItems[`Final Input #${input.id}`] ? "btn-copied" : ""
-                  }
-                  onClick={(e) => {
-                    e.preventDefault();
-                    copyToClipboard(input.text, `Final Input #${input.id}`);
-                  }}
-                >
-                  {copiedItems[`Final Input #${input.id}`]
-                    ? "✓ Copied"
-                    : "Copy"}
-                </button>
+                <div className="output-summary-actions">
+                  <button
+                    className={
+                      finalInputDone[input.id]
+                        ? "done-toggle-btn done-toggle-btn-active"
+                        : "done-toggle-btn"
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleFinalInputDone(input.id);
+                    }}
+                  >
+                    {finalInputDone[input.id] ? "✓ Done" : "Mark Done"}
+                  </button>
+
+                  <button
+                    className={
+                      copiedItems[`Final Input #${input.id}`] ? "btn-copied" : ""
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      copyToClipboard(input.text, `Final Input #${input.id}`);
+                    }}
+                  >
+                    {copiedItems[`Final Input #${input.id}`]
+                      ? "✓ Copied"
+                      : "Copy"}
+                  </button>
+                </div>
               </summary>
 
               <div className="output-content">
